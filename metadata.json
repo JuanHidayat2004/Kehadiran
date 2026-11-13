@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Absensi Guru SD RFID",
+  "description": "Sistem Informasi Absensi Guru Sekolah Dasar Berbasis RFID Card Scanner (ESP32 & RC522) dengan Import/Export Excel dan Penyimpanan LocalStorage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

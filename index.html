@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Absensi Guru SD RFID</title>
+    <meta
+      name="description"
+      content="Sistem Informasi Absensi Guru Sekolah Dasar Berbasis RFID Card Scanner (ESP32 & RC522) dengan Import/Export Excel dan Penyimpanan LocalStorage."
+    />
+    <meta property="og:title" content="Sistem Absensi Guru SD RFID" />
+    <meta
+      property="og:description"
+      content="Sistem Informasi Absensi Guru Sekolah Dasar Berbasis RFID Card Scanner (ESP32 & RC522) dengan Import/Export Excel dan Penyimpanan LocalStorage."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fonts: Plus Jakarta Sans + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap 5 CSS & Bootstrap Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Custom CSS3 -->
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <!-- ================= LOGIN ADMIN SCREEN ================= -->
+    <section id="loginScreen" class="login-wrapper d-none">
+      <div class="login-card">
+        <div class="login-brand">
+          <img
+            src="/assets/images/school_emblem_sd.jpg"
+            alt="Logo Sekolah Dasar"
+            class="school-logo-lg"
+            onerror="this.style.display='none'"
+          />
+          <div>
+            <h1 class="h5 fw-bold text-dark mb-1" id="loginSchoolName">SD Negeri 01 Nusantara</h1>
+            <p class="text-secondary small mb-0">Sistem Informasi Absensi Guru RFID</p>
+          </div>
+        </div>
+
+        <form id="loginForm" class="mt-4" novalidate>
+          <div id="loginErrorAlert" class="alert alert-danger py-2 px-3 small d-none" role="alert">
+            Username atau password tidak sesuai.
+          </div>
+
+          <div class="mb-3">
+            <label for="loginUsername" class="form-label small fw-semibold text-secondary">
+              Username Admin
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white text-secondary">
+                <i class="bi bi-person"></i>
+              </span>
+              <input
+                type="text"
+                class="form-control"
+                id="loginUsername"
+                placeholder="Masukkan username"
+                autocomplete="username"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="loginPassword" class="form-label small fw-semibold text-secondary">
+              Password
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white text-secondary">
+                <i class="bi bi-lock"></i>
+              </span>
+              <input
+                type="password"
+                class="form-control"
+                id="loginPassword"
+                placeholder="Masukkan password"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                id="toggleLoginPass"
+                aria-label="Tampilkan password"
+              >
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 mt-4">
+            <button type="submit" class="btn btn-primary fw-semibold py-2">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Masuk ke Dashboard
+            </button>
+            <button
+              type="button"
+              id="btnOpenKioskFromLogin"
+              class="btn btn-outline-primary fw-medium py-2"
+            >
+              <i class="bi bi-upc-scan me-2"></i>Buka Mode Scanner Kiosk
+            </button>
+          </div>
+
+          <div class="login-hint mt-4 pt-3 border-top text-center">
+            <span class="text-secondary small">
+              Akun bawaan operator:
+              <code class="mono-text text-primary fw-semibold">admin</code> /
+              <code class="mono-text text-primary fw-semibold">admin123</code>
+            </span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= MAIN APP SHELL ================= -->
+    <div id="appShell" class="app-layout d-none">
+      <!-- Sidebar Desktop & Offcanvas Mobile -->
+      <aside id="appSidebar" class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" aria-label="Menu Utama">
+        <div class="sidebar-header">
+          <div class="d-flex align-items-center gap-2 overflow-hidden">
+            <img
+              src="/assets/images/school_emblem_sd.jpg"
+              alt="Logo Sekolah"
+              class="school-logo-sm"
+              onerror="this.style.display='none'"
+            />
+            <div class="min-w-0">
+              <div class="sidebar-brand-title text-truncate" id="sidebarSchoolName">
+                SDN 01 Nusantara
+              </div>
+              <div class="sidebar-brand-sub">Absensi Guru RFID</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn-close d-lg-none"
+            data-bs-dismiss="offcanvas"
+            data-bs-target="#appSidebar"
+            aria-label="Tutup menu"
+          ></button>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Navigasi Halaman">
+          <div class="nav-section-label">Menu Utama</div>
+          <button type="button" class="nav-link-item active" data-page="dashboard">
+            <i class="bi bi-grid-1x2"></i>
+            <span>Dashboard</span>
+          </button>
+          <button type="button" class="nav-link-item" data-page="scanner">
+            <i class="bi bi-upc-scan"></i>
+            <span>Mode Scanner RFID</span>
+          </button>
+          <button type="button" class="nav-link-item" data-page="guru">
+            <i class="bi bi-people"></i>
+            <span>Data Guru</span>
+          </button>
+
+          <div class="nav-section-label mt-3">Data & Laporan</div>
+          <button type="button" class="nav-link-item" data-page="import">
+            <i class="bi bi-file-earmark-excel"></i>
+            <span>Import Excel</span>
+          </button>
+          <button type="button" class="nav-link-item" data-page="laporan">
+            <i class="bi bi-clipboard-data"></i>
+            <span>Rekapitulasi & Ekspor</span>
+          </button>
+
+          <div class="nav-section-label mt-3">Perangkat & Sistem</div>
+          <button type="button" class="nav-link-item" data-page="esp32">
+            <i class="bi bi-cpu"></i>
+            <span>Integrasi ESP32</span>
+          </button>
+          <button type="button" class="nav-link-item" data-page="pengaturan">
+            <i class="bi bi-sliders"></i>
+            <span>Pengaturan</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="small text-secondary mb-2">
+            <i class="bi bi-hdd me-1"></i>Penyimpanan: LocalStorage
+          </div>
+          <div class="d-grid">
+            <button type="button" id="btnLogoutSidebar" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-box-arrow-left me-1"></i>Keluar (Logout)
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Workspace -->
+      <div class="main-workspace">
+        <!-- Top Navbar -->
+        <header class="topbar">
+          <div class="d-flex align-items-center gap-3 min-w-0">
+            <button
+              class="btn btn-outline-secondary btn-sm d-lg-none"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#appSidebar"
+              aria-label="Buka menu navigasi"
+            >
+              <i class="bi bi-list fs-5"></i>
+            </button>
+            <div class="min-w-0">
+              <h2 class="topbar-title text-truncate mb-0" id="topbarPageTitle">Dashboard Utama</h2>
+              <div class="topbar-subtitle text-truncate" id="topbarDateLabel">
+                Memuat tanggal...
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 shrink-0">
+            <div class="clock-chip d-none d-sm-flex align-items-center gap-2">
+              <i class="bi bi-clock text-primary"></i>
+              <span id="topbarClock" class="mono-text fw-semibold tabular-nums">00:00:00</span>
+            </div>
+
+            <div class="dropdown">
+              <button
+                class="btn btn-light border btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle text-primary"></i>
+                <span id="navbarAdminName" class="d-none d-md-inline">Admin</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <button class="dropdown-item" type="button" data-nav-shortcut="pengaturan">
+                    <i class="bi bi-sliders me-2"></i>Pengaturan Jam & Admin
+                  </button>
+                </li>
+                <li>
+                  <button class="dropdown-item" type="button" data-nav-shortcut="scanner">
+                    <i class="bi bi-upc-scan me-2"></i>Mode Scanner Layar Besar
+                  </button>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <button class="dropdown-item text-danger" type="button" id="btnLogoutNavbar">
+                    <i class="bi bi-box-arrow-left me-2"></i>Logout
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page Content Viewport -->
+        <main class="content-viewport">
+          <!-- ==================== 1. DASHBOARD ==================== -->
+          <section id="page-dashboard" class="app-page">
+            <!-- Hero Header Strip -->
+            <div class="surface-card mb-4">
+              <div class="row align-items-center g-3">
+                <div class="col-lg-7">
+                  <div class="text-secondary small fw-medium mb-1">
+                    Ringkasan Kehadiran Hari Ini · <span id="dashDateSub" class="text-dark fw-semibold">-</span>
+                  </div>
+                  <h3 class="h4 fw-bold text-dark mb-1">
+                    Pantauan Absensi Guru Sekolah Dasar
+                  </h3>
+                  <p class="text-secondary small mb-0">
+                    Jam kerja aktif: Masuk <strong class="mono-text" id="dashRuleMasuk">07:00</strong> ·
+                    Batas Telat <strong class="mono-text" id="dashRuleTelat">07:15</strong> ·
+                    Pulang <strong class="mono-text" id="dashRulePulang">14:00</strong>
+                  </p>
+                </div>
+                <div class="col-lg-5 d-flex flex-wrap justify-content-lg-end align-items-center gap-2">
+                  <div class="digital-clock-box">
+                    <div class="small text-secondary">Waktu Sekarang</div>
+                    <div class="fs-4 fw-bold mono-text text-primary tabular-nums" id="dashDigitalClock">
+                      00:00:00
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-primary" data-nav-shortcut="scanner">
+                    <i class="bi bi-upc-scan me-2"></i>Buka Scanner RFID
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6 KPI Cards -->
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                  <div class="kpi-label">Total Guru Aktif</div>
+                  <div class="kpi-value tabular-nums text-dark" id="statTotalGuru">0</div>
+                  <div class="kpi-meta text-secondary">Terdaftar di sistem</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                  <div class="kpi-label">Sudah Hadir</div>
+                  <div class="kpi-value tabular-nums text-primary" id="statSudahHadir">0</div>
+                  <div class="kpi-meta text-secondary">Sudah scan masuk</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                  <div class="kpi-label">Belum Hadir</div>
+                  <div class="kpi-value tabular-nums text-secondary" id="statBelumHadir">0</div>
+                  <div class="kpi-meta text-secondary">Menunggu scan</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                  <div class="kpi-label">Sudah Pulang</div>
+                  <div class="kpi-value tabular-nums text-success" id="statSudahPulang">0</div>
+                  <div class="kpi-meta text-secondary">Selesai scan pulang</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                  <div class="kpi-label">Terlambat</div>
+                  <div class="kpi-value tabular-nums text-warning-emphasis" id="statTerlambat">0</div>
+                  <div class="kpi-meta text-secondary">Melewati batas masuk</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card kpi-card-accent">
+                  <div class="kpi-label">Kehadiran Hari Ini</div>
+                  <div class="kpi-value tabular-nums text-primary" id="statPersentase">0%</div>
+                  <div class="progress mt-2" style="height: 5px">
+                    <div
+                      id="statProgressBar"
+                      class="progress-bar bg-primary"
+                      role="progressbar"
+                      style="width: 0%"
+                      aria-valuenow="0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Aktivitas Absensi Terbaru -->
+            <div class="surface-card">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                <div>
+                  <h4 class="h6 fw-bold text-dark mb-0">Aktivitas Absensi Hari Ini</h4>
+                  <p class="small text-secondary mb-0">
+                    Menampilkan daftar seluruh guru aktif dan catatan scan masuk/pulang hari ini.
+                  </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <div class="input-group input-group-sm" style="width: 220px">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input
+                      type="text"
+                      id="dashSearchInput"
+                      class="form-control"
+                      placeholder="Cari nama / NIP..."
+                    />
+                  </div>
+                  <select id="dashStatusFilter" class="form-select form-select-sm" style="width: 165px">
+                    <option value="semua">Semua Status</option>
+                    <option value="Tepat Waktu">Tepat Waktu</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Sudah Pulang">Sudah Pulang</option>
+                    <option value="Belum Hadir">Belum Hadir</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover align-middle modern-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Nama Guru</th>
+                      <th>NIP / ID Guru</th>
+                      <th>Jabatan &amp; Kelas</th>
+                      <th>Jam Masuk</th>
+                      <th>Jam Pulang</th>
+                      <th>Status Kehadiran</th>
+                      <th>Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 2. MODE SCANNER RFID ==================== -->
+          <section id="page-scanner" class="app-page d-none">
+            <div class="scanner-topbar-actions d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <div>
+                <h3 class="h5 fw-bold text-dark mb-0">Mode Scanner RFID Kiosk</h3>
+                <p class="small text-secondary mb-0">
+                  Tempelkan kartu RFID pada pembaca RC522 / USB Reader untuk mencatat absen masuk &amp; pulang.
+                </p>
+              </div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="form-check form-switch mb-0 me-2">
+                  <input class="form-check-input" type="checkbox" id="toggleSoundBeep" checked />
+                  <label class="form-check-label small" for="toggleSoundBeep">Suara Beep</label>
+                </div>
+                <div class="form-check form-switch mb-0 me-2">
+                  <input class="form-check-input" type="checkbox" id="toggleEsp32Polling" checked />
+                  <label class="form-check-label small" for="toggleEsp32Polling">
+                    Terima Wi-Fi ESP32
+                  </label>
+                </div>
+                <button type="button" id="btnScannerFullscreen" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-arrows-fullscreen me-1"></i>Layar Penuh
+                </button>
+                <button
+                  type="button"
+                  id="btnBackFromKiosk"
+                  class="btn btn-outline-secondary btn-sm d-none"
+                >
+                  <i class="bi bi-box-arrow-in-left me-1"></i>Login Admin
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-4 align-items-stretch">
+              <!-- Kolom Kiri: Jam Besar + Input Scanner -->
+              <div class="col-lg-5">
+                <div class="surface-card h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div class="scanner-clock-panel text-center mb-4">
+                      <div class="small text-primary fw-semibold mb-1" id="scannerDateLabel">
+                        Jumat, 13 November 2026
+                      </div>
+                      <div class="scanner-big-clock mono-text tabular-nums" id="scannerBigClock">
+                        00:00:00
+                      </div>
+                      <div class="small text-secondary mt-2">
+                        Masuk <span class="mono-text fw-semibold" id="scannerRuleMasuk">07:00</span> ·
+                        Batas <span class="mono-text fw-semibold" id="scannerRuleTelat">07:15</span> ·
+                        Pulang <span class="mono-text fw-semibold" id="scannerRulePulang">14:00</span>
+                      </div>
+                    </div>
+
+                    <form id="rfidScanForm" class="mb-3">
+                      <label for="rfidUidInput" class="form-label fw-semibold small text-dark">
+                        Input Pembaca Kartu RFID (UID)
+                      </label>
+                      <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-primary text-white border-primary">
+                          <i class="bi bi-credit-card-2-front"></i>
+                        </span>
+                        <input
+                          type="text"
+                          id="rfidUidInput"
+                          class="form-control mono-text text-uppercase fw-semibold"
+                          placeholder="Tempel kartu atau ketik UID..."
+                          autocomplete="off"
+                        />
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                          Scan
+                        </button>
+                      </div>
+                      <div class="form-text small">
+                        Pembaca USB RFID otomatis mengetik UID dan menekan Enter. Arahkan kursor di kotak ini.
+                      </div>
+                    </form>
+                  </div>
+
+                  <!-- Simulasi Cepat untuk Pengujian Operator -->
+                  <div class="pt-3 border-top">
+                    <div class="small fw-semibold text-secondary mb-2">
+                      Simulasi Kartu Cepat (Pengujian)
+                    </div>
+                    <div id="scannerQuickSimButtons" class="d-flex flex-wrap gap-2"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Kolom Kanan: Kartu Identitas Hasil Scan -->
+              <div class="col-lg-7">
+                <div id="scannerResultPanel" class="surface-card h-100 d-flex flex-column justify-content-center">
+                  <!-- State Idle -->
+                  <div id="scannerIdleState" class="text-center py-4">
+                    <img
+                      src="/assets/images/rfid_scanner_device.jpg"
+                      alt="Ilustrasi Scanner RFID Guru"
+                      class="scanner-illustration mb-3"
+                      onerror="this.style.display='none'"
+                    />
+                    <h4 class="h5 fw-bold text-dark mb-2">Siap Memindai Kartu RFID Guru</h4>
+                    <p class="text-secondary small mx-auto mb-3" style="max-width: 440px">
+                      Tempelkan kartu RFID ke perangkat ESP32 + RC522 atau ketik UID kartu di sebelah kiri.
+                      Scan pertama dicatat sebagai <strong>Absen Masuk</strong>, scan kedua sebagai <strong>Absen Pulang</strong>.
+                    </p>
+                    <div class="small text-secondary">
+                      Jeda anti-scan ganda aktif: <strong class="mono-text" id="scannerCooldownInfo">10</strong> detik
+                    </div>
+                  </div>
+
+                  <!-- State Hasil Scan (Diisi oleh absensi.js) -->
+                  <div id="scannerFeedbackState" class="d-none"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Riwayat Scan Terbaru Sesi Ini -->
+            <div class="surface-card mt-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="h6 fw-bold text-dark mb-0">Log Scan Terakhir Hari Ini</h4>
+                <span class="small text-secondary" id="scannerLogCount">0 scan tercatat</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle modern-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Waktu Scan</th>
+                      <th>UID RFID</th>
+                      <th>Nama Guru</th>
+                      <th>Jenis</th>
+                      <th>Status</th>
+                      <th>Sumber</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scannerRecentLogBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 3. MANAJEMEN DATA GURU ==================== -->
+          <section id="page-guru" class="app-page d-none">
+            <div class="surface-card">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <div>
+                  <h3 class="h5 fw-bold text-dark mb-1">Manajemen Data Guru</h3>
+                  <p class="small text-secondary mb-0">
+                    Kelola identitas guru sekolah dasar serta UID kartu RFID masing-masing.
+                  </p>
+                </div>
+                <button type="button" id="btnTambahGuru" class="btn btn-primary">
+                  <i class="bi bi-person-plus me-2"></i>Tambah Guru
+                </button>
+              </div>
+
+              <!-- Filter & Pencarian -->
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input
+                      type="text"
+                      id="guruSearchInput"
+                      class="form-control"
+                      placeholder="Cari nama guru, NIP, ID, kelas, atau UID RFID..."
+                    />
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <select id="guruStatusFilter" class="form-select">
+                    <option value="semua">Semua Status</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                  </select>
+                </div>
+                <div class="col-md-3 text-md-end d-flex align-items-center justify-content-md-end">
+                  <span class="small text-secondary" id="guruCountLabel">0 data guru</span>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover align-middle modern-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>ID Guru</th>
+                      <th>Nama Lengkap</th>
+                      <th>NIP</th>
+                      <th>Jabatan</th>
+                      <th>Kelas / Bagian</th>
+                      <th>UID RFID</th>
+                      <th>Status</th>
+                      <th class="text-end">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="guruTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 4. IMPORT DATA EXCEL ==================== -->
+          <section id="page-import" class="app-page d-none">
+            <div class="row g-4">
+              <div class="col-lg-5">
+                <div class="surface-card h-100">
+                  <h3 class="h5 fw-bold text-dark mb-1">Import Data Absensi Excel</h3>
+                  <p class="small text-secondary mb-3">
+                    Unggah file <code class="mono-text">.xlsx</code>, <code class="mono-text">.xls</code>, atau
+                    <code class="mono-text">.csv</code> dari komputer perantara atau logger ESP32 (Metode A).
+                  </p>
+
+                  <div id="excelDropZone" class="upload-dropzone mb-3">
+                    <i class="bi bi-file-earmark-spreadsheet fs-1 text-primary mb-2 d-block"></i>
+                    <div class="fw-semibold text-dark mb-1">Pilih atau Seret File Excel / CSV</div>
+                    <div class="small text-secondary mb-3">
+                      Format yang didukung: .xlsx, .xls, .csv
+                    </div>
+                    <input
+                      type="file"
+                      id="excelFileInput"
+                      class="d-none"
+                      accept=".xlsx,.xls,.csv"
+                    />
+                    <button type="button" id="btnSelectExcelFile" class="btn btn-primary btn-sm">
+                      <i class="bi bi-upload me-1"></i>Pilih File dari Komputer
+                    </button>
+                  </div>
+
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <button type="button" id="btnDownloadTemplateExcel" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-download me-1"></i>Download Template Excel
+                    </button>
+                    <span class="small text-secondary" id="excelFileNameLabel">Belum ada file dipilih</span>
+                  </div>
+
+                  <div class="p-3 bg-light rounded border">
+                    <div class="small fw-bold text-dark mb-2">Ketentuan Format Kolom:</div>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-bordered bg-white mb-2 small">
+                        <thead class="table-light">
+                          <tr>
+                            <th>UID RFID</th>
+                            <th>Nama Guru</th>
+                            <th>Tanggal</th>
+                            <th>Jam Masuk</th>
+                            <th>Jam Pulang</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="mono-text">A1B2C3D4</td>
+                            <td>Ahmad Fauzi</td>
+                            <td class="mono-text">13/11/2026</td>
+                            <td class="mono-text">06:55</td>
+                            <td class="mono-text">14:05</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p class="small text-secondary mb-0">
+                      Sistem otomatis mencocokkan <strong>UID RFID</strong> dengan Data Guru, mencegah duplikasi,
+                      serta memperbarui jam pulang jika sebelumnya belum tercatat.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-7">
+                <div class="surface-card h-100">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                      <h4 class="h6 fw-bold text-dark mb-0">Preview Data Sebelum Disimpan</h4>
+                      <p class="small text-secondary mb-0" id="excelPreviewSummary">
+                        Unggah file Excel untuk melihat pratinjau validasi data.
+                      </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button type="button" id="btnResetExcelPreview" class="btn btn-outline-secondary btn-sm d-none">
+                        Batal
+                      </button>
+                      <button type="button" id="btnConfirmExcelImport" class="btn btn-primary btn-sm d-none">
+                        <i class="bi bi-check2-circle me-1"></i>Konfirmasi Import
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="excelErrorAlert" class="alert alert-danger small d-none" role="alert"></div>
+                  <div id="excelResultAlert" class="alert alert-success small d-none" role="alert"></div>
+
+                  <!-- Opsi Duplikat -->
+                  <div id="excelDuplicateOptionBox" class="mb-3 p-2 bg-light border rounded d-none">
+                    <div class="small fw-semibold text-dark mb-1">Aturan Jika Data Sudah Ada (Duplikat):</div>
+                    <div class="d-flex flex-wrap gap-3">
+                      <div class="form-check mb-0">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="duplicatePolicy"
+                          id="policyUpdateMissing"
+                          value="update"
+                          checked
+                        />
+                        <label class="form-check-label small" for="policyUpdateMissing">
+                          Perbarui / lengkapi data yang kosong (Disarankan)
+                        </label>
+                      </div>
+                      <div class="form-check mb-0">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="duplicatePolicy"
+                          id="policySkipExisting"
+                          value="skip"
+                        />
+                        <label class="form-check-label small" for="policySkipExisting">
+                          Lewati semua data duplikat
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="table-responsive" style="max-height: 430px">
+                    <table class="table table-sm table-hover align-middle modern-table mb-0">
+                      <thead>
+                        <tr>
+                          <th>Baris</th>
+                          <th>UID RFID</th>
+                          <th>Nama Guru</th>
+                          <th>Tanggal</th>
+                          <th>Masuk</th>
+                          <th>Pulang</th>
+                          <th>Validasi</th>
+                        </tr>
+                      </thead>
+                      <tbody id="excelPreviewBody">
+                        <tr>
+                          <td colspan="7" class="text-center text-secondary py-5">
+                            Belum ada data Excel yang dimuat.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 5. REKAPITULASI & EKSPOR ==================== -->
+          <section id="page-laporan" class="app-page d-none">
+            <!-- Kop Surat Khusus Cetak -->
+            <div class="print-only-header mb-4">
+              <div class="d-flex align-items-center justify-content-between border-bottom border-dark pb-3">
+                <div class="d-flex align-items-center gap-3">
+                  <img
+                    src="/assets/images/school_emblem_sd.jpg"
+                    alt="Logo Sekolah"
+                    style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px"
+                  />
+                  <div>
+                    <h2 class="h4 fw-bold mb-0" id="printSchoolName">SD Negeri 01 Nusantara</h2>
+                    <div class="small" id="printSchoolAddress">Jl. Pendidikan No. 1, Indonesia</div>
+                    <div class="small fw-semibold mt-1" id="printReportSubtitle">
+                      Laporan Rekapitulasi Absensi Guru
+                    </div>
+                  </div>
+                </div>
+                <div class="text-end small">
+                  <div>Dicetak pada:</div>
+                  <div class="fw-semibold" id="printGeneratedAt">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="surface-card mb-4 no-print">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                <div>
+                  <h3 class="h5 fw-bold text-dark mb-1">Rekapitulasi Absensi Guru</h3>
+                  <p class="small text-secondary mb-0">
+                    Saring laporan harian, mingguan, atau bulanan lalu ekspor ke Excel, CSV, atau cetak.
+                  </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" id="btnExportExcel" class="btn btn-primary btn-sm">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+                  </button>
+                  <button type="button" id="btnExportCsv" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-filetype-csv me-1"></i>Export CSV
+                  </button>
+                  <button type="button" id="btnPrintLaporan" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-printer me-1"></i>Cetak Laporan
+                  </button>
+                  <button type="button" id="btnDownloadLaporan" class="btn btn-outline-dark btn-sm">
+                    <i class="bi bi-download me-1"></i>Download Laporan
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Rekap -->
+              <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold text-secondary" for="laporanPeriode">
+                    Periode Rekap
+                  </label>
+                  <select id="laporanPeriode" class="form-select form-select-sm">
+                    <option value="harian">Rekap Harian</option>
+                    <option value="mingguan">Rekap Mingguan</option>
+                    <option value="bulanan">Rekap Bulanan</option>
+                  </select>
+                </div>
+                <div class="col-md-3" id="laporanTanggalWrap">
+                  <label class="form-label small fw-semibold text-secondary" for="laporanTanggal">
+                    Pilih Tanggal
+                  </label>
+                  <input type="date" id="laporanTanggal" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-3 d-none" id="laporanBulanWrap">
+                  <label class="form-label small fw-semibold text-secondary" for="laporanBulan">
+                    Pilih Bulan
+                  </label>
+                  <input type="month" id="laporanBulan" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold text-secondary" for="laporanGuruFilter">
+                    Nama Guru
+                  </label>
+                  <input
+                    type="text"
+                    id="laporanGuruFilter"
+                    class="form-control form-control-sm"
+                    placeholder="Semua guru atau ketik nama..."
+                  />
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold text-secondary" for="laporanStatusFilter">
+                    Status Kehadiran
+                  </label>
+                  <select id="laporanStatusFilter" class="form-select form-select-sm">
+                    <option value="semua">Semua Status</option>
+                    <option value="Tepat Waktu">Tepat Waktu</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Sudah Pulang">Sudah Pulang</option>
+                    <option value="Belum Hadir">Belum Hadir</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ringkasan Periode -->
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                  <div class="kpi-label">Total Catatan</div>
+                  <div class="kpi-value tabular-nums text-dark" id="lapStatTotal">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                  <div class="kpi-label">Tepat Waktu</div>
+                  <div class="kpi-value tabular-nums text-primary" id="lapStatTepat">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                  <div class="kpi-label">Terlambat</div>
+                  <div class="kpi-value tabular-nums text-warning-emphasis" id="lapStatTelat">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                  <div class="kpi-label">Sudah Pulang</div>
+                  <div class="kpi-value tabular-nums text-success" id="lapStatPulang">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Laporan -->
+            <div class="surface-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="h6 fw-bold text-dark mb-0" id="laporanTableTitle">Daftar Kehadiran</h4>
+                <span class="small text-secondary" id="laporanPeriodeInfo">-</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle modern-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th>
+                      <th>Nama Guru</th>
+                      <th>NIP / ID</th>
+                      <th>Kelas / Bagian</th>
+                      <th>Jam Masuk</th>
+                      <th>Jam Pulang</th>
+                      <th>Status</th>
+                      <th>Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="laporanTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 6. INTEGRASI ESP32 & RC522 ==================== -->
+          <section id="page-esp32" class="app-page d-none">
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <div class="surface-card h-100">
+                  <h3 class="h5 fw-bold text-dark mb-1">Integrasi Perangkat ESP32 + RFID RC522</h3>
+                  <p class="small text-secondary mb-3">
+                    Website ini menyediakan 2 metode integrasi perangkat keras RFID secara resmi.
+                  </p>
+
+                  <div class="p-3 bg-light border rounded mb-3">
+                    <div class="fw-bold text-dark small mb-1">
+                      Metode A: Import Excel / CSV
+                    </div>
+                    <p class="small text-secondary mb-2">
+                      Perangkat ESP32 atau komputer perantara menyimpan log scan ke file
+                      <code class="mono-text">.xlsx</code> atau <code class="mono-text">.csv</code>, lalu operator
+                      mengunggahnya melalui menu <strong>Import Excel</strong>.
+                    </p>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-nav-shortcut="import">
+                      Buka Menu Import Excel
+                    </button>
+                  </div>
+
+                  <div class="p-3 bg-light border rounded mb-3">
+                    <div class="fw-bold text-dark small mb-1">
+                      Metode B: Wi-Fi HTTP POST (Server Perantara Aktif)
+                    </div>
+                    <p class="small text-secondary mb-2">
+                      ESP32 mengirim JSON via Wi-Fi ke endpoint API server perantara Node.js, lalu browser otomatis
+                      mengambil dan mencatat absensi ke LocalStorage:
+                    </p>
+                    <div class="input-group input-group-sm mb-2">
+                      <span class="input-group-text bg-white fw-semibold">POST</span>
+                      <input
+                        type="text"
+                        id="esp32EndpointUrl"
+                        class="form-control mono-text"
+                        readonly
+                      />
+                      <button type="button" id="btnCopyEndpoint" class="btn btn-outline-primary">
+                        Salin URL
+                      </button>
+                    </div>
+                    <pre class="code-box mb-0">{
+  "uid": "A1B2C3D4",
+  "tanggal": "2026-11-13",
+  "waktu": "06:55:00"
+}</pre>
+                  </div>
+
+                  <!-- Uji Kirim HTTP POST -->
+                  <div class="pt-2">
+                    <div class="fw-bold text-dark small mb-2">
+                      Uji Endpoint API (Simulasi HTTP POST dari ESP32)
+                    </div>
+                    <form id="esp32TestForm" class="row g-2">
+                      <div class="col-sm-5">
+                        <input
+                          type="text"
+                          id="espTestUid"
+                          class="form-control form-control-sm mono-text text-uppercase"
+                          placeholder="UID (mis. A1B2C3D4)"
+                          value="A1B2C3D4"
+                          required
+                        />
+                      </div>
+                      <div class="col-sm-4">
+                        <input
+                          type="time"
+                          id="espTestTime"
+                          class="form-control form-control-sm mono-text"
+                        />
+                      </div>
+                      <div class="col-sm-3 d-grid">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                          Kirim POST
+                        </button>
+                      </div>
+                    </form>
+                    <div id="espTestStatus" class="small mt-2 text-secondary"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-6">
+                <div class="surface-card h-100">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="h6 fw-bold text-dark mb-0">Rangkaian Pin (Wiring) ESP32 ↔ RC522</h4>
+                  </div>
+                  <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered small mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Pin RFID RC522</th>
+                          <th>Pin ESP32</th>
+                          <th>Keterangan</th>
+                        </tr>
+                      </thead>
+                      <tbody class="mono-text">
+                        <tr><td>SDA (SS)</td><td>GPIO 5</td><td>Slave Select SPI</td></tr>
+                        <tr><td>SCK</td><td>GPIO 18</td><td>SPI Clock</td></tr>
+                        <tr><td>MOSI</td><td>GPIO 23</td><td>Master Out Slave In</td></tr>
+                        <tr><td>MISO</td><td>GPIO 19</td><td>Master In Slave Out</td></tr>
+                        <tr><td>RST</td><td>GPIO 22</td><td>Reset Modul</td></tr>
+                        <tr><td>3.3V</td><td>3V3</td><td>Wajib 3.3V (Jangan 5V!)</td></tr>
+                        <tr><td>GND</td><td>GND</td><td>Ground</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="h6 fw-bold text-dark mb-0">Contoh Sketch Arduino IDE (ESP32)</h4>
+                    <button type="button" id="btnCopyArduinoCode" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-clipboard me-1"></i>Salin Kode
+                    </button>
+                  </div>
+                  <pre id="esp32ArduinoCode" class="code-box" style="max-height: 290px"></pre>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 7. PENGATURAN ==================== -->
+          <section id="page-pengaturan" class="app-page d-none">
+            <div class="row g-4">
+              <!-- Pengaturan Jam Kerja -->
+              <div class="col-lg-7">
+                <div class="surface-card h-100">
+                  <h3 class="h5 fw-bold text-dark mb-1">Pengaturan Sekolah &amp; Jam Kerja</h3>
+                  <p class="small text-secondary mb-4">
+                    Ubah jadwal masuk, batas keterlambatan, dan jam pulang tanpa mengedit kode program.
+                  </p>
+
+                  <form id="settingsForm">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label for="setNamaSekolah" class="form-label small fw-semibold">Nama Sekolah</label>
+                        <input type="text" id="setNamaSekolah" class="form-control" required />
+                      </div>
+                      <div class="col-md-6">
+                        <label for="setAlamatSekolah" class="form-label small fw-semibold">Alamat Sekolah</label>
+                        <input type="text" id="setAlamatSekolah" class="form-control" required />
+                      </div>
+                      <div class="col-md-4">
+                        <label for="setJamMasuk" class="form-label small fw-semibold">Jam Masuk</label>
+                        <input type="time" id="setJamMasuk" class="form-control mono-text" required />
+                      </div>
+                      <div class="col-md-4">
+                        <label for="setBatasTelat" class="form-label small fw-semibold">Batas Keterlambatan</label>
+                        <input type="time" id="setBatasTelat" class="form-control mono-text" required />
+                      </div>
+                      <div class="col-md-4">
+                        <label for="setJamPulang" class="form-label small fw-semibold">Jam Pulang</label>
+                        <input type="time" id="setJamPulang" class="form-control mono-text" required />
+                      </div>
+                      <div class="col-md-6">
+                        <label for="setCooldown" class="form-label small fw-semibold">
+                          Jeda Anti-Scan Ganda (Detik)
+                        </label>
+                        <input
+                          type="number"
+                          id="setCooldown"
+                          class="form-control mono-text"
+                          min="3"
+                          max="120"
+                          required
+                        />
+                        <div class="form-text small">Mencegah kartu terbaca ganda saat ditempel lama.</div>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 d-flex flex-wrap gap-2">
+                      <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Simpan Pengaturan
+                      </button>
+                      <button type="button" id="btnResetDemoData" class="btn btn-outline-danger ms-auto">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Data Demo Awal
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Pengaturan Akun Admin -->
+              <div class="col-lg-5">
+                <div class="surface-card h-100">
+                  <h3 class="h5 fw-bold text-dark mb-1">Akun Administrator</h3>
+                  <p class="small text-secondary mb-4">
+                    Perbarui kredensial login operator atau kepala sekolah.
+                  </p>
+
+                  <form id="adminAccountForm">
+                    <div class="mb-3">
+                      <label for="setAdminNama" class="form-label small fw-semibold">Nama Tampilan Admin</label>
+                      <input type="text" id="setAdminNama" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                      <label for="setAdminUsername" class="form-label small fw-semibold">Username Baru</label>
+                      <input type="text" id="setAdminUsername" class="form-control mono-text" required />
+                    </div>
+                    <div class="mb-3">
+                      <label for="setAdminPassword" class="form-label small fw-semibold">
+                        Password Baru (Kosongkan jika tidak diubah)
+                      </label>
+                      <input type="password" id="setAdminPassword" class="form-control" placeholder="••••••" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="bi bi-shield-check me-1"></i>Simpan Akun Admin
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- ================= MODAL TAMBAH / EDIT GURU ================= -->
+    <div class="modal fade" id="guruModal" tabindex="-1" aria-labelledby="guruModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="guruModalLabel">Tambah Data Guru</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+          <form id="guruForm">
+            <div class="modal-body">
+              <input type="hidden" id="guruFormOriginalId" />
+              <div class="row g-3">
+                <div class="col-md-5">
+                  <label for="guruId" class="form-label small fw-semibold">ID Guru</label>
+                  <input type="text" id="guruId" class="form-control mono-text" placeholder="G-001" required />
+                </div>
+                <div class="col-md-7">
+                  <label for="guruNip" class="form-label small fw-semibold">NIP</label>
+                  <input
+                    type="text"
+                    id="guruNip"
+                    class="form-control mono-text"
+                    placeholder="198504122010011005"
+                    required
+                  />
+                </div>
+                <div class="col-12">
+                  <label for="guruNama" class="form-label small fw-semibold">Nama Lengkap</label>
+                  <input
+                    type="text"
+                    id="guruNama"
+                    class="form-control"
+                    placeholder="Contoh: Ahmad Fauzi, S.Pd."
+                    required
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label for="guruJabatan" class="form-label small fw-semibold">Jabatan</label>
+                  <select id="guruJabatan" class="form-select" required>
+                    <option value="Guru Kelas">Guru Kelas</option>
+                    <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
+                    <option value="Kepala Sekolah">Kepala Sekolah</option>
+                    <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="guruKelas" class="form-label small fw-semibold">Kelas / Bagian</label>
+                  <input
+                    type="text"
+                    id="guruKelas"
+                    class="form-control"
+                    placeholder="Mis. Kelas 4A / PJOK"
+                    required
+                  />
+                </div>
+                <div class="col-md-7">
+                  <label for="guruUid" class="form-label small fw-semibold">UID Kartu RFID</label>
+                  <input
+                    type="text"
+                    id="guruUid"
+                    class="form-control mono-text text-uppercase"
+                    placeholder="A1B2C3D4"
+                    required
+                  />
+                </div>
+                <div class="col-md-5">
+                  <label for="guruStatus" class="form-label small fw-semibold">Status</label>
+                  <select id="guruStatus" class="form-select" required>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary">Simpan Data Guru</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL KONFIRMASI UNIVERSAL ================= -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title h6 fw-bold" id="confirmModalTitle">Konfirmasi</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+          <div class="modal-body small text-secondary" id="confirmModalMessage">
+            Apakah Anda yakin?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+              Batal
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" id="confirmModalOkBtn">Ya, Lanjutkan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TOAST CONTAINER ================= -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SheetJS (XLSX.js) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Aplikasi Vanilla JS Modular -->
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
